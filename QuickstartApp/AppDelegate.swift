@@ -7,16 +7,31 @@
 //
 
 import UIKit
+import GoogleAPIClientForREST
+import AppAuth
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
     var window: UIWindow?
 
-
+    
+    var currentAuthorizationFlow: OIDAuthorizationFlowSession?
+    
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplicationLaunchOptionsKey: Any]?) -> Bool {
-        // Override point for customization after application launch.
         return true
+    }
+    
+    func application(_ app: UIApplication, open url: URL, options: [UIApplicationOpenURLOptionsKey : Any] = [:]) -> Bool
+    {
+        // Sends the URL to the current authorization flow (if any) which will process it if it relates to
+        // an authorization response.
+        if currentAuthorizationFlow!.resumeAuthorizationFlow(with: url) {
+            self.currentAuthorizationFlow = nil
+            return true
+        }
+        // Your additional URL handling (if any) goes here.
+        return false
     }
 
     func applicationWillResignActive(_ application: UIApplication) {

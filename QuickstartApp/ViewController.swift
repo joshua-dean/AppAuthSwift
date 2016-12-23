@@ -1,25 +1,132 @@
-//
-//  ViewController.swift
-//  QuickstartApp
-//
-//  Created by DEAN, JOSHUA on 12/5/16.
-//  Copyright © 2016 com.example. All rights reserved.
-//
-
+import GoogleAPIClientForREST
 import UIKit
+import GTMAppAuth
+import AppAuth
 
 class ViewController: UIViewController {
+    
+    private let kKeychainItemName = "SeatingChartIOS"
+    private let kClientID = "974204174547-p3vuej87lqp38nkvmjgcb0askle6cqj7.apps.googleusercontent.com"
+    private let kRedirectURI = "com.googleusercontent.apps.974204174547-p3vuej87lqp38nkvmjgcb0askle6cqj7:/oauthredirect"
+    //private let kAuthorizerKey = "authorization"
+    private let kIssuer = "https://accounts.google.com"
 
+    var authState: OIDAuthState?
+    
+    
+    @IBOutlet weak var textView: UITextView!
+    
+    // When the view loads, create necessary subviews
+    // and initialize the Google Sheets API service
     override func viewDidLoad() {
         super.viewDidLoad()
-        // Do any additional setup after loading the view, typically from a nib.
+    }
+    
+    func logMessage(_ message: String)
+    {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "hh:mm:ss"
+        let dateString = dateFormatter.string(from: Date())
+        textView.text = textView.text + "\n" + dateString + ": " + message
+    }
+    @IBAction func authorize(_ sender: Any)
+    {
+        auth()
     }
 
-    override func didReceiveMemoryWarning() {
-        super.didReceiveMemoryWarning()
-        // Dispose of any resources that can be recreated.
+    func auth()
+    {
+        //need this potatoe
+        let issuer = URL(string: kIssuer)!
+        let redirectURI = URL(string: kRedirectURI)!
+
+        logMessage("Fetching configuration for issuer: " + issuer.description)
+        // discovers endpoints
+        OIDAuthorizationService.discoverConfiguration(forIssuer: issuer, completion: {(_ configuration: OIDServiceConfiguration?, _ error: Error?) -> Void in
+            if configuration == nil {
+                self.logMessage("Error retrieving discovery document: " + (error?.localizedDescription)!)
+                return
+            }
+            self.logMessage("Got configuration: " + configuration!.description)
+            // builds authentication request
+            let request = OIDAuthorizationRequest(configuration: configuration!, clientId: self.kClientID, scopes: [OIDScopeOpenID, OIDScopeProfile], redirectURL: redirectURI, responseType: OIDResponseTypeCode, additionalParameters: nil)
+            // performs authentication request
+            let appDelegate = (UIApplication.shared.delegate! as! AppDelegate)
+            self.logMessage("Initiating authorization request with scope: " + request.scope!.description)
+
+            appDelegate.currentAuthorizationFlow = OIDAuthState.authState(byPresenting: request, presenting: self, callback: {(_ authState: OIDAuthState?, _ error: Error?) -> Void in
+                if authState != nil {
+                    self.logMessage("Got authorization tokens. Access token: " + (authState?.lastTokenResponse?.accessToken!.description)!)
+                }
+                else {
+                    self.logMessage("Authorization error: " + (error?.localizedDescription.description)!)
+                }
+            })
+        })
     }
+ 
+    /*
+    func auth()
+    {
+        //need this potatoe
+        let issuer = URL(string: kIssuer)!
+        let redirectURI = URL(string: kRedirectURI)!
+        logMessage("Fetching configuration for issuer: " + issuer.description)
+        // discovers endpoints
+        //OIDAuthStateAuthorizationCallback
+        var potatoe2 = ""
+        potatoe2 += ""
+        let aCallback: OIDAuthStateAuthorizationCallback =
+        {(_ authState: OIDAuthState?, _ error: Error?) -> Void in
+            var potatoe = ""
+            potatoe += ""
+            if (authState != nil)
+            {
+                _ = GTMAppAuthFetcherAuthorization(authState: authState!)
+                //self.gtmAuthorization = authorization
+                self.logMessage("Got authorization tokens. Access token: " + (authState?.lastTokenResponse?.accessToken!.description)!)
+            }
+            else
+            {
+                //self.gtmAuthorization = nil
+                self.logMessage("Authorization error: " + (error?.localizedDescription.description)!)
+            }
+        }
+        let authorizationEndpoint = URL(string: "https://accounts.google.com/o/oauth2/v2/auth")!
+        let tokenEndpoint = URL(string: "https://www.googleapis.com/oauth2/v4/token")!
+        let config = OIDServiceConfiguration(authorizationEndpoint: authorizationEndpoint, tokenEndpoint: tokenEndpoint)
 
-
+        //OIDDiscoveryCallback
+        let dCallback: OIDDiscoveryCallback =
+            {(_ configuration: OIDServiceConfiguration?, _ error: Error?) -> Void in
+            
+            
+            
+            
+            
+            /*(_ configuration: OIDServiceConfiguration?, _ error: Error?) -> Void in
+                 */
+                if (configuration == nil)
+                {
+                    self.logMessage("Error retrieving discovery document: " + (error?.localizedDescription)!)
+                    //self.gtmAuthorization = nil  //might add again
+                    return
+                }
+                self.logMessage("Got configuration: " + configuration!.description)
+            
+            
+                // builds authentication request
+                let request = OIDAuthorizationRequest(configuration: configuration!, clientId: self.kClientID, scopes: [OIDScopeOpenID, OIDScopeProfile], redirectURL: redirectURI, responseType: OIDResponseTypeCode, additionalParameters: nil)
+                // performs authentication request
+                let appDelegate = (UIApplication.shared.delegate! as! AppDelegate)
+                self.logMessage("Initiating authorization request with scope: " + request.scope!.description)
+            
+                appDelegate.currentAuthorizationFlow = OIDAuthState.authState(byPresenting: request, presenting: self, callback: aCallback)
+        }
+        
+                //OIDAuthorizationService.discoverConfiguration(forDiscoveryURL: issuer, completion: dCallback)
+        OIDAuthorizationService.discoverConfiguration(forIssuer: issuer, completion: dCallback)
+    }
+ */
+ 
 }
-
