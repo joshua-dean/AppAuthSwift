@@ -34,6 +34,10 @@
  */
 static NSString *const kOpenIDConfigurationWellKnownPath = @".well-known/openid-configuration";
 
+/*! @brief The state authorization parameter.
+ */
+static NSString *const kStateParameter = @"state";
+
 NS_ASSUME_NONNULL_BEGIN
 
 @interface OIDAuthorizationFlowSessionImplementation : NSObject<OIDAuthorizationFlowSession>
@@ -119,16 +123,10 @@ NS_ASSUME_NONNULL_BEGIN
                                     underlyingError:nil];
   }
 
-  // no errors, must be a valid OAuth 2.0 response
-  if (!error) {
-    response = [[OIDAuthorizationResponse alloc] initWithRequest:_request
-                                                      parameters:query.dictionaryValue];
-  }
-
   // verifies that the state in the response matches the state in the request, or both are nil
-  if (!OIDIsEqualIncludingNil(_request.state, response.state)) {
+  if (!OIDIsEqualIncludingNil(_request.state, query.dictionaryValue[kStateParameter])) {
     NSMutableDictionary *userInfo = [query.dictionaryValue mutableCopy];
-    userInfo[NSLocalizedFailureReasonErrorKey] =
+    userInfo[NSLocalizedDescriptionKey] =
         [NSString stringWithFormat:@"State mismatch, expecting %@ but got %@ in authorization "
                                     "response %@",
                                    _request.state,
@@ -138,6 +136,12 @@ NS_ASSUME_NONNULL_BEGIN
     error = [NSError errorWithDomain:OIDOAuthAuthorizationErrorDomain
                                 code:OIDErrorCodeOAuthAuthorizationClientError
                             userInfo:userInfo];
+  }
+
+  // no error, should be a valid OAuth 2.0 response
+  if (!error) {
+    response = [[OIDAuthorizationResponse alloc] initWithRequest:_request
+                                                      parameters:query.dictionaryValue];
   }
 
   [_UICoordinator dismissAuthorizationAnimated:YES
@@ -179,7 +183,6 @@ NS_ASSUME_NONNULL_BEGIN
                                                         completion:completion];
 }
 
-
 + (void)discoverServiceConfigurationForDiscoveryURL:(NSURL *)discoveryURL
     completion:(OIDDiscoveryCallback)completion {
 
@@ -191,7 +194,7 @@ NS_ASSUME_NONNULL_BEGIN
     if (error || !data) {
       error = [OIDErrorUtilities errorWithCode:OIDErrorCodeNetworkError
                                underlyingError:error
-                                   description:nil];
+                                   description:error.localizedDescription];
       dispatch_async(dispatch_get_main_queue(), ^{
         completion(nil, error);
       });
@@ -271,14 +274,16 @@ NS_ASSUME_NONNULL_BEGIN
     }
 
     NSHTTPURLResponse *HTTPURLResponse = (NSHTTPURLResponse *)response;
-
-    if (HTTPURLResponse.statusCode != 200) {
+    NSInteger statusCode = HTTPURLResponse.statusCode;
+    if (statusCode != 200) {
       // A server error occurred.
       NSError *serverError =
           [OIDErrorUtilities HTTPErrorWithHTTPResponse:HTTPURLResponse data:data];
 
-      // HTTP 400 may indicate an RFC6749 Section 5.2 error response, checks for that
-      if (HTTPURLResponse.statusCode == 400) {
+      // HTTP 400 may indicate an RFC6749 Section 5.2 error response.
+      // HTTP 429 may occur during polling for device-flow requests for the slow_down error
+      // https://tools.ietf.org/html/draft-ietf-oauth-device-flow-03#section-3.5
+      if (statusCode == 400 || statusCode == 429) {
         NSError *jsonDeserializationError;
         NSDictionary<NSString *, NSObject<NSCopying> *> *json =
             [NSJSONSerialization JSONObjectWithData:data options:0 error:&jsonDeserializationError];

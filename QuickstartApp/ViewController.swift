@@ -13,6 +13,9 @@ class ViewController: UIViewController {
 
     var authState: OIDAuthState?
     
+    private let service = GTLRSheetsService()
+    let appDelegate = (UIApplication.shared.delegate! as! AppDelegate)
+    var authorization: GTMAppAuthFetcherAuthorization?
     
     @IBOutlet weak var textView: UITextView!
     
@@ -20,6 +23,9 @@ class ViewController: UIViewController {
     // and initialize the Google Sheets API service
     override func viewDidLoad() {
         super.viewDidLoad()
+        
+        
+        
     }
     
     func logMessage(_ message: String)
@@ -32,6 +38,59 @@ class ViewController: UIViewController {
     @IBAction func authorize(_ sender: Any)
     {
         auth()
+    }
+    
+    @IBAction func listSheet(_ sender: Any)
+    {
+        if let _ = service.authorizer {
+            listMajors()
+        }
+        else
+        {
+            auth()
+        }
+    }
+    
+    // Display (in the UITextView) the names and majors of students in a sample
+    // spreadsheet:
+    // https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit
+    func listMajors() {
+        logMessage("Getting sheet data...")
+        let spreadsheetId = "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms"
+        let range = "Class Data!A2:E"
+        let query = GTLRSheetsQuery_SpreadsheetsValuesGet.query(withSpreadsheetId: spreadsheetId, range:range)
+
+        service.executeQuery(query, delegate: self, didFinish: #selector(ViewController.displayResultWithTicket(ticket:finishedWithObject:error:)))
+        
+    }
+
+    // Process the response and display output
+    func displayResultWithTicket(ticket: GTLRServiceTicket,
+                                 finishedWithObject result : GTLRSheets_ValueRange,
+                                 error : NSError?) {
+        
+        if let error = error {
+            logMessage("Error" + error.localizedDescription)
+            return
+        }
+        
+        var majorsString = ""
+        let rows = result.values!
+        
+        if rows.isEmpty {
+            logMessage("No data found.")
+            return
+        }
+        
+        majorsString += "Name, Major:\n"
+        for row in rows {
+            let name = row[0]
+            let major = row[4]
+            
+            majorsString += "\(name), \(major)\n"
+        }
+        
+        logMessage(majorsString)
     }
 
     func auth()
@@ -49,14 +108,16 @@ class ViewController: UIViewController {
             }
             self.logMessage("Got configuration: " + configuration!.description)
             // builds authentication request
-            let request = OIDAuthorizationRequest(configuration: configuration!, clientId: self.kClientID, scopes: [OIDScopeOpenID, OIDScopeProfile], redirectURL: redirectURI, responseType: OIDResponseTypeCode, additionalParameters: nil)
+            let scopes = [kGTLRAuthScopeSheetsSpreadsheets]
+            let request = OIDAuthorizationRequest(configuration: configuration!, clientId: self.kClientID, scopes: scopes, redirectURL: redirectURI, responseType: OIDResponseTypeCode, additionalParameters: nil)
             // performs authentication request
-            let appDelegate = (UIApplication.shared.delegate! as! AppDelegate)
             self.logMessage("Initiating authorization request with scope: " + request.scope!.description)
 
-            appDelegate.currentAuthorizationFlow = OIDAuthState.authState(byPresenting: request, presenting: self, callback: {(_ authState: OIDAuthState?, _ error: Error?) -> Void in
+            self.appDelegate.currentAuthorizationFlow = OIDAuthState.authState(byPresenting: request, presenting: self, callback: {(_ authState: OIDAuthState?, _ error: Error?) -> Void in
                 if authState != nil {
                     self.logMessage("Got authorization tokens. Access token: " + (authState?.lastTokenResponse?.accessToken!.description)!)
+                    self.authorization = GTMAppAuthFetcherAuthorization(authState: authState!)
+                    self.service.authorizer = self.authorization
                 }
                 else {
                     self.logMessage("Authorization error: " + (error?.localizedDescription.description)!)
