@@ -5,4 +5,6 @@ target 'QuickstartApp' do
     pod 'GoogleAPIClientForREST/Drive'
     pod 'AppAuth'
     pod 'GTMAppAuth'
+    pod 'GoogleAPIClient/Drive'
+    pod 'GTMOAuth2'
 end

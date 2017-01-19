@@ -2,8 +2,10 @@ import GoogleAPIClientForREST
 import UIKit
 import GTMAppAuth
 import AppAuth
+import GoogleAPIClient
+import GTMOAuth2
 
-class ViewController: UIViewController {
+class ViewController: UIViewController, UIPickerViewDataSource, UIPickerViewDelegate {
     
     private let kKeychainItemName = "SeatingChartIOS"
     private let kClientID = "974204174547-p3vuej87lqp38nkvmjgcb0askle6cqj7.apps.googleusercontent.com"
@@ -12,8 +14,12 @@ class ViewController: UIViewController {
     private let kIssuer = "https://accounts.google.com"
 
     var authState: OIDAuthState?
+    var fileList: [GTLDriveFile] = []
+    var currentFile: GTLDriveFile?
+    @IBOutlet weak var fileListView: UIPickerView!
     
     private let service = GTLRSheetsService()
+    private let driveService = GTLServiceDrive()
     let appDelegate = (UIApplication.shared.delegate! as! AppDelegate)
     var authorization: GTMAppAuthFetcherAuthorization?
     
@@ -25,6 +31,45 @@ class ViewController: UIViewController {
         super.viewDidLoad()
         
         
+      fileListView.dataSource = self
+      fileListView.delegate = self
+        
+        
+    }
+    
+    //dataSources
+    func numberOfComponents(in: UIPickerView) -> Int {
+        return 1
+    }
+    func pickerView(_ pickerView: UIPickerView, numberOfRowsInComponent component: Int) -> Int {
+        return fileList.count
+    }
+    //delegates
+    func pickerView(_ pickerView: UIPickerView, titleForRow row: Int, forComponent component: Int) -> String?
+    {
+        
+        return fileList[row].name
+    }
+    
+    func pickerView(_ pickerView: UIPickerView, didSelectRow row: Int, inComponent component: Int)
+    {
+        //on selection
+        currentFile = fileList[row]
+    }
+    //rainbow
+    func pickerView(_ pickerView: UIPickerView, viewForRow row: Int, forComponent component: Int, reusing view: UIView?) -> UIView {
+        var pickerLabel = view as! UILabel!
+        if view == nil {  //if no label there yet
+            pickerLabel = UILabel()
+            //color the label's background
+            let hue = CGFloat(row)/CGFloat(fileList.count)
+            pickerLabel?.backgroundColor = UIColor(hue: hue, saturation: 1.0, brightness: 1.0, alpha: 1.0)
+        }
+        let titleData = fileList[row].name
+        let myTitle = NSAttributedString(string: titleData!, attributes: [NSFontAttributeName:UIFont(name: "Arial", size: 16.0)!,NSForegroundColorAttributeName:UIColor.black])
+        pickerLabel!.attributedText = myTitle
+        pickerLabel!.textAlignment = .center
+        return pickerLabel!
         
     }
     
@@ -43,54 +88,123 @@ class ViewController: UIViewController {
     @IBAction func listSheet(_ sender: Any)
     {
         if let _ = service.authorizer {
-            listMajors()
+            listDocuments()
         }
         else
         {
             auth()
         }
     }
+    @IBAction func listSheetInfo(_ sender: Any)
+    {
+        if(currentFile != nil)
+        {
+            let range = "Sheet1!A:A"
+            let query = GTLRSheetsQuery_SpreadsheetsValuesGet.query(withSpreadsheetId: currentFile!.identifier, range: range)
+            service.executeQuery(query, delegate: self, didFinish: #selector(ViewController.displaySheetInfo(ticket:finishedWithObject:error:)))
+        }
+    }
     
-    // Display (in the UITextView) the names and majors of students in a sample
-    // spreadsheet:
-    // https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit
-    func listMajors() {
-        logMessage("Getting sheet data...")
-        let spreadsheetId = "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms"
-        let range = "Class Data!A2:E"
-        let query = GTLRSheetsQuery_SpreadsheetsValuesGet.query(withSpreadsheetId: spreadsheetId, range:range)
-
-        service.executeQuery(query, delegate: self, didFinish: #selector(ViewController.displayResultWithTicket(ticket:finishedWithObject:error:)))
-        
+    func displaySheetInfo(ticket: GTLRServiceTicket,
+                          finishedWithObject result : GTLRSheets_ValueRange,
+                          error : NSError?)
+    {
+        Swift.print(result.values!)
+    }
+    
+    @IBAction func updateWithData(_ sender: Any)
+    {
+        if(currentFile != nil)
+        {
+            let data = GTLRSheets_ValueRange()
+            data.range = "Sheet1!A1:C3"
+            data.majorDimension = kGTLRSheets_DimensionRange_Dimension_Rows
+            data.values = [["Josh", "Connor", "Steve-O"],["Lead Programmer", "Code Lackey", "Circle Clicker"],["","",""]]
+            
+            let query = GTLRSheetsQuery_SpreadsheetsValuesUpdate.query(withObject: data, spreadsheetId: currentFile!.identifier, range: data.range!)
+            query.valueInputOption = kGTLRSheets_BatchUpdateValuesRequest_ValueInputOption_UserEntered
+            service.executeQuery(query, delegate: self, didFinish: nil)
+            
+        }
+    }
+    
+    @IBAction func updateWithPotatoes(_ sender: Any)
+    {
+        if(currentFile != nil)
+        {
+            let data = GTLRSheets_ValueRange()
+            data.range = "Sheet1!A1:C3"
+            data.majorDimension = kGTLRSheets_DimensionRange_Dimension_Rows
+            data.values = [["potatoe", "potatoe", "potatoe"],["potatoe", "potatoe", "potatoe"],["potatoe", "potatoe", "potatoe"]]
+            
+            let query = GTLRSheetsQuery_SpreadsheetsValuesUpdate.query(withObject: data, spreadsheetId: currentFile!.identifier, range: data.range!)
+            query.valueInputOption = kGTLRSheets_BatchUpdateValuesRequest_ValueInputOption_UserEntered
+            service.executeQuery(query, delegate: self, didFinish: nil)
+            
+        }
+    }
+    
+    //unused
+    func displayUpdateInfo(ticket: GTLRServiceTicket,
+                           finishedWithObject result: GTLRSheets_UpdateValuesResponse,
+                           error: NSError?) {
+        Swift.print(result)
     }
 
-    // Process the response and display output
-    func displayResultWithTicket(ticket: GTLRServiceTicket,
-                                 finishedWithObject result : GTLRSheets_ValueRange,
+    
+    
+    // Lists Documents
+    func listDocuments() {
+        logMessage("Getting sheet data...")
+        let query = GTLQueryDrive.queryForFilesList()!
+        query.pageSize = 1000
+        query.fields = "nextPageToken, files(mimeType, id, name)"
+        query.orderBy = "modifiedByMeTime desc,name"
+        driveService.executeQuery(
+            query,
+            delegate: self,
+            didFinish: #selector(ViewController.listDocuments(ticket:finishedWithObject:error:))
+        )
+    }
+    
+    // Parse results and display
+    func listDocuments(ticket : GTLServiceTicket,
+                                 finishedWithObject response : GTLDriveFileList,
                                  error : NSError?) {
-        
         if let error = error {
-            logMessage("Error" + error.localizedDescription)
+            logMessage("Error: " + error.localizedDescription)
             return
         }
         
-        var majorsString = ""
-        let rows = result.values!
         
-        if rows.isEmpty {
-            logMessage("No data found.")
-            return
+        var filesString = ""
+        
+        if let files = response.files, !files.isEmpty
+        {
+            fileList = files as! [GTLDriveFile]
+            filesString += "Files:\n"
+            for file in fileList
+            {
+                if file.mimeType == "application/vnd.google-apps.spreadsheet" && file.name.contains("[SCD]")
+                {
+                    filesString += "\(file.name) (\(file.identifier))\n"
+                }
+                else
+                {
+                    if let index = fileList.index(of: file) {
+                        fileList.remove(at: index)
+                    }
+                }
+ 
+            }
+        } else
+        {
+            filesString = "No files found."
         }
         
-        majorsString += "Name, Major:\n"
-        for row in rows {
-            let name = row[0]
-            let major = row[4]
-            
-            majorsString += "\(name), \(major)\n"
-        }
-        
-        logMessage(majorsString)
+        logMessage(filesString)
+        currentFile = fileList[0]
+        fileListView.reloadAllComponents() //update spinner
     }
 
     func auth()
@@ -108,7 +222,7 @@ class ViewController: UIViewController {
             }
             self.logMessage("Got configuration: " + configuration!.description)
             // builds authentication request
-            let scopes = [kGTLRAuthScopeSheetsSpreadsheets]
+            let scopes = [kGTLRAuthScopeSheetsSpreadsheets, kGTLRAuthScopeDrive]
             let request = OIDAuthorizationRequest(configuration: configuration!, clientId: self.kClientID, scopes: scopes, redirectURL: redirectURI, responseType: OIDResponseTypeCode, additionalParameters: nil)
             // performs authentication request
             self.logMessage("Initiating authorization request with scope: " + request.scope!.description)
@@ -118,6 +232,7 @@ class ViewController: UIViewController {
                     self.logMessage("Got authorization tokens. Access token: " + (authState?.lastTokenResponse?.accessToken!.description)!)
                     self.authorization = GTMAppAuthFetcherAuthorization(authState: authState!)
                     self.service.authorizer = self.authorization
+                    self.driveService.authorizer = self.authorization
                 }
                 else {
                     self.logMessage("Authorization error: " + (error?.localizedDescription.description)!)

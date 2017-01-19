@@ -1,5 +1,10 @@
 PODS:
   - AppAuth (0.7.1)
+  - GoogleAPIClient/Core (1.0.5):
+    - GTMSessionFetcher (~> 1.1)
+  - GoogleAPIClient/Drive (1.0.5):
+    - GoogleAPIClient/Core
+    - GTMSessionFetcher (~> 1.1)
   - GoogleAPIClientForREST/Core (1.1.1):
     - GTMSessionFetcher (>= 1.1.7)
   - GoogleAPIClientForREST/Drive (1.1.1):
@@ -11,6 +16,8 @@ PODS:
   - GTMAppAuth (0.5.0):
     - AppAuth (~> 0.7.0)
     - GTMSessionFetcher (~> 1.1)
+  - GTMOAuth2 (1.1.4):
+    - GTMSessionFetcher (~> 1.1)
   - GTMSessionFetcher (1.1.7):
     - GTMSessionFetcher/Full (= 1.1.7)
   - GTMSessionFetcher/Core (1.1.7)
@@ -19,16 +26,20 @@ PODS:
 
 DEPENDENCIES:
   - AppAuth
+  - GoogleAPIClient/Drive
   - GoogleAPIClientForREST/Drive
   - GoogleAPIClientForREST/Sheets
   - GTMAppAuth
+  - GTMOAuth2
 
 SPEC CHECKSUMS:
   AppAuth: c56d352b0d50bb34dbb302d7ba50b20aa6b6ae89
+  GoogleAPIClient: 4a6b0b807de8b1115a2835180b25dd93dc60f1ea
   GoogleAPIClientForREST: f272e35f7fe9f80ab232756c798adc32245ece8c
   GTMAppAuth: 4b7bdc1fefdf6a49f3d9fc1aa6123f0c7e9b6660
+  GTMOAuth2: 7fc9c10f5c745f4d9850419ea88889fe3baa6b7d
   GTMSessionFetcher: a1f8ed39e4fe21c68957daed472c7afbcdf29166
 
-PODFILE CHECKSUM: 165af29a3ed3b9d1ffc2d152f581b07bd5635393
+PODFILE CHECKSUM: c08f3ddd848d436bc442752aa185a2d114741b69
 
 COCOAPODS: 1.1.1
