@@ -1,9 +1,8 @@
-import GoogleAPIClientForREST
 import UIKit
-import GTMAppAuth
 import AppAuth
+import GTMAppAuth
 import GoogleAPIClient
-import GTMOAuth2
+import GoogleAPIClientForREST
 
 class ViewController: UIViewController, UIPickerViewDataSource, UIPickerViewDelegate {
     
