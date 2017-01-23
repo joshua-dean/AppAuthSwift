@@ -99,7 +99,7 @@ class ViewController: UIViewController, UIPickerViewDataSource, UIPickerViewDele
     {
         if(currentFile != nil)
         {
-            let range = "Sheet1!A:A"
+            let range = "Sheet1!A1:C3"
             let query = GTLRSheetsQuery_SpreadsheetsValuesGet.query(withSpreadsheetId: currentFile!.identifier, range: range)
             service.executeQuery(query, delegate: self, didFinish: #selector(ViewController.displaySheetInfo(ticket:finishedWithObject:error:)))
         }
@@ -109,7 +109,14 @@ class ViewController: UIViewController, UIPickerViewDataSource, UIPickerViewDele
                           finishedWithObject result : GTLRSheets_ValueRange,
                           error : NSError?)
     {
-        Swift.print(result.values!)
+        if let x = result.values?.description
+        {
+            logMessage(x)
+        }
+        else
+        {
+            logMessage("[]")
+        }
     }
     
     @IBAction func updateWithData(_ sender: Any)
@@ -119,7 +126,7 @@ class ViewController: UIViewController, UIPickerViewDataSource, UIPickerViewDele
             let data = GTLRSheets_ValueRange()
             data.range = "Sheet1!A1:C3"
             data.majorDimension = kGTLRSheets_DimensionRange_Dimension_Rows
-            data.values = [["Josh", "Connor", "Steve-O"],["Lead Programmer", "Code Lackey", "Circle Clicker"],["","",""]]
+            data.values = [["Josh", "Connor", "Steve-O"],["Lead Programmer", "Code Lackey", "Circle Clicker"],["AR10","AR4","AR11"]]
             
             let query = GTLRSheetsQuery_SpreadsheetsValuesUpdate.query(withObject: data, spreadsheetId: currentFile!.identifier, range: data.range!)
             query.valueInputOption = kGTLRSheets_BatchUpdateValuesRequest_ValueInputOption_UserEntered
