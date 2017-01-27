@@ -21,6 +21,8 @@ class ViewController: UIViewController, UIPickerViewDataSource, UIPickerViewDele
     private let driveService = GTLServiceDrive()
     let appDelegate = (UIApplication.shared.delegate! as! AppDelegate)
     var authorization: GTMAppAuthFetcherAuthorization?
+    var kExampleAuthorizerKey = "authorization"
+    let userDefaults = UserDefaults.standard
     
     @IBOutlet weak var textView: UITextView!
     
@@ -30,9 +32,10 @@ class ViewController: UIViewController, UIPickerViewDataSource, UIPickerViewDele
         super.viewDidLoad()
         
         
-      fileListView.dataSource = self
-      fileListView.delegate = self
+        fileListView.dataSource = self
+        fileListView.delegate = self
         
+        loadAuth()
         
     }
     
@@ -53,7 +56,10 @@ class ViewController: UIViewController, UIPickerViewDataSource, UIPickerViewDele
     func pickerView(_ pickerView: UIPickerView, didSelectRow row: Int, inComponent component: Int)
     {
         //on selection
-        currentFile = fileList[row]
+        if row > 0
+        {
+            currentFile = fileList[row]
+        }
     }
     //rainbow
     func pickerView(_ pickerView: UIPickerView, viewForRow row: Int, forComponent component: Int, reusing view: UIView?) -> UIView {
@@ -84,10 +90,35 @@ class ViewController: UIViewController, UIPickerViewDataSource, UIPickerViewDele
         auth()
     }
     
+    func saveAuth()
+    {
+        if authorization != nil && (authorization?.canAuthorize())! {
+            let encodedData: Data = NSKeyedArchiver.archivedData(withRootObject: authorization!)
+            userDefaults.set(encodedData, forKey: kExampleAuthorizerKey)
+            userDefaults.synchronize()
+        }
+        else {
+            userDefaults.removeObject(forKey: kExampleAuthorizerKey)
+        }
+    }
+    
+    func loadAuth()
+    {
+        if let _ = userDefaults.object(forKey: kExampleAuthorizerKey)
+        {
+            let decoded = userDefaults.object(forKey: kExampleAuthorizerKey) as! Data
+            let testAuth = NSKeyedUnarchiver.unarchiveObject(with: decoded) as! GTMAppAuthFetcherAuthorization
+            authorization = testAuth
+            service.authorizer = authorization
+            driveService.authorizer = authorization
+        }
+    }
+    
     @IBAction func listSheet(_ sender: Any)
     {
         if let _ = service.authorizer {
             listDocuments()
+            
         }
         else
         {
@@ -239,6 +270,8 @@ class ViewController: UIViewController, UIPickerViewDataSource, UIPickerViewDele
                     self.authorization = GTMAppAuthFetcherAuthorization(authState: authState!)
                     self.service.authorizer = self.authorization
                     self.driveService.authorizer = self.authorization
+                    
+                    self.saveAuth()
                 }
                 else {
                     self.logMessage("Authorization error: " + (error?.localizedDescription.description)!)
