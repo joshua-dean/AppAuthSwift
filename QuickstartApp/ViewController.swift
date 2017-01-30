@@ -7,8 +7,8 @@ import GoogleAPIClientForREST
 class ViewController: UIViewController, UIPickerViewDataSource, UIPickerViewDelegate {
     
     private let kKeychainItemName = "SeatingChartIOS"
-    private let kClientID = "974204174547-p3vuej87lqp38nkvmjgcb0askle6cqj7.apps.googleusercontent.com"
-    private let kRedirectURI = "com.googleusercontent.apps.974204174547-p3vuej87lqp38nkvmjgcb0askle6cqj7:/oauthredirect"
+    private let kClientID = "get your own u scrub"
+    private let kRedirectURI = "get your own u scrub"
     //private let kAuthorizerKey = "authorization"
     private let kIssuer = "https://accounts.google.com"
 
